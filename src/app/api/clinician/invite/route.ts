@@ -38,18 +38,21 @@ export async function POST(req: Request) {
     const patient = await prisma.user.findUnique({ where: { email } });
 
     const inviteToken = crypto.randomBytes(32).toString("hex");
+    // Invite tokens expire after 7 days
+    const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     if (patient) {
       // Create or update link
       await prisma.clinicianLink.upsert({
         where: { clinicianId_patientId: { clinicianId, patientId: patient.id } },
-        update: { status: "PENDING", inviteToken, inviteEmail: email },
+        update: { status: "PENDING", inviteToken, inviteEmail: email, inviteExpiresAt },
         create: {
           clinicianId,
           patientId: patient.id,
           status: "PENDING",
           inviteToken,
           inviteEmail: email,
+          inviteExpiresAt,
         },
       });
 

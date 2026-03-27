@@ -13,6 +13,11 @@ function getKey(): Buffer {
       "Set it to a 32-character string before using encryption features."
     );
   }
+  if (keyStr.length < 32) {
+    throw new Error(
+      `ENCRYPTION_KEY must be at least 32 characters for cryptographic strength (got ${keyStr.length}).`
+    );
+  }
   return crypto.createHash("sha256").update(keyStr).digest();
 }
 

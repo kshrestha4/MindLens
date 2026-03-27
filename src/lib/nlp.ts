@@ -104,8 +104,18 @@ export function analyzeText(text: string): NLPAnalysis {
   for (const [emotion, keywords] of Object.entries(EMOTION_CLUSTERS)) {
     emotionScores[emotion] = tokens.filter((t) => keywords.includes(t)).length;
   }
+  // Determine primary emotion from detected cluster scores
   const primaryEmotion = Object.entries(emotionScores).sort((a, b) => b[1] - a[1])[0];
-  const emotion = primaryEmotion[1] > 0 ? primaryEmotion[0] : sentimentScore > 0.1 ? "contentment" : sentimentScore < -0.1 ? "distress" : "neutral";
+  let emotion: string;
+  if (primaryEmotion[1] > 0) {
+    emotion = primaryEmotion[0];
+  } else if (sentimentScore > 0.1) {
+    emotion = "contentment";
+  } else if (sentimentScore < -0.1) {
+    emotion = "distress";
+  } else {
+    emotion = "neutral";
+  }
 
   // ─── Keyword extraction ──────────────────────────────────────────────
   const wordFreq: Record<string, number> = {};

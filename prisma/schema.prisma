@@ -213,15 +213,16 @@ model ClinicianProfile {
 }
 
 model ClinicianLink {
-  id           String     @id @default(cuid())
-  clinicianId  String
-  patientId    String
-  status       LinkStatus @default(PENDING)
-  inviteToken  String?    @unique
-  inviteEmail  String?
-  linkedAt     DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  clinicianId     String
+  patientId       String
+  status          LinkStatus @default(PENDING)
+  inviteToken     String?    @unique
+  inviteEmail     String?
+  inviteExpiresAt DateTime?
+  linkedAt        DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   clinician        User             @relation("ClinicianLinks", fields: [clinicianId], references: [id], onDelete: Cascade, map: "ClinicianLink_clinician_fkey")
   patient          User             @relation("PatientLinks", fields: [patientId], references: [id], onDelete: Cascade)

@@ -26,6 +26,20 @@ const GAD7_MAX = 21;
 const GAD7_SCALE_FACTOR = 35;
 const GAD7_BASELINE_OFFSET = 5;
 
+// Depression risk weight coefficients (must sum to ≤ 1.1 to stay in 0–100 range after clamping)
+const W_DEPRESSION_MOOD = 0.35;       // mood trend is the strongest depression predictor
+const W_DEPRESSION_SLEEP = 0.25;      // poor sleep is closely tied to depression
+const W_DEPRESSION_ENERGY = 0.2;      // energy decline reflects anhedonia
+const W_DEPRESSION_JOURNAL = 0.2;     // journal negativity captures cognitive symptoms
+const W_DEPRESSION_PHQ = 0.1;        // baseline PHQ-9 calibration offset
+
+// Stress risk weight coefficients
+const W_STRESS_STRESS = 0.4;         // self-reported stress is the direct stress indicator
+const W_STRESS_SLEEP = 0.2;          // poor sleep amplifies stress
+const W_STRESS_MOOD = 0.2;           // mood decline correlates with stress
+const W_STRESS_JOURNAL = 0.1;        // journal content reflects rumination
+const W_STRESS_GAD = 0.1;           // baseline GAD-7 calibration offset
+
 /** Compute a linear regression slope for an array of values */
 function computeSlope(values: number[]): number {
   const n = values.length;
@@ -193,10 +207,18 @@ export async function computeRiskForUser(userId: string): Promise<RiskResult> {
 
   if (hasCheckIns) {
     depressionRisk = clamp(
-      moodRisk * 0.35 + sleepRisk * 0.25 + energyRisk * 0.2 + journalRisk * 0.2 + phqAdjust * 0.1
+      moodRisk * W_DEPRESSION_MOOD +
+      sleepRisk * W_DEPRESSION_SLEEP +
+      energyRisk * W_DEPRESSION_ENERGY +
+      journalRisk * W_DEPRESSION_JOURNAL +
+      phqAdjust * W_DEPRESSION_PHQ
     );
     stressRisk = clamp(
-      stressRiskComputed * 0.4 + sleepRisk * 0.2 + moodRisk * 0.2 + journalRisk * 0.1 + gadAdjust * 0.1
+      stressRiskComputed * W_STRESS_STRESS +
+      sleepRisk * W_STRESS_SLEEP +
+      moodRisk * W_STRESS_MOOD +
+      journalRisk * W_STRESS_JOURNAL +
+      gadAdjust * W_STRESS_GAD
     );
     generalRisk = clamp((depressionRisk * 0.5 + stressRisk * 0.5));
   } else {

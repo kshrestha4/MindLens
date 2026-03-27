@@ -13,6 +13,12 @@ export async function POST(_req: Request, { params }: Params) {
   const link = await prisma.clinicianLink.findUnique({ where: { inviteToken: token } });
 
   if (!link) return NextResponse.json({ error: "Invalid or expired invite token." }, { status: 404 });
+
+  // Check token expiration
+  if (link.inviteExpiresAt && link.inviteExpiresAt < new Date()) {
+    return NextResponse.json({ error: "This invite token has expired." }, { status: 410 });
+  }
+
   if (link.patientId !== userId) {
     return NextResponse.json({ error: "This invite was not sent to you." }, { status: 403 });
   }
