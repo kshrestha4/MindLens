@@ -1,0 +1,303 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts             Account[]
+  sessions             Session[]
+  consentSettings      ConsentSettings?
+  baseline             BaselineAssessment?
+  checkIns             DailyCheckIn[]
+  journalEntries       JournalEntry[]
+  voiceNotes           VoiceNote[]
+  riskScores           RiskScore[]
+  alerts               Alert[]
+  clinicianProfile     ClinicianProfile?
+  linkedPatients       ClinicianLink[]      @relation("ClinicianLinks")
+  linkedClinicians     ClinicianLink[]      @relation("PatientLinks")
+  companionSuggestions CompanionSuggestion[]
+}
+
+enum Role {
+  USER
+  CLINICIAN
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model ConsentSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  journalingAnalysis  Boolean  @default(false)
+  voiceUpload         Boolean  @default(false)
+  voiceFeatureExtract Boolean  @default(false)
+  clinicianSharing    Boolean  @default(false)
+  dataRetentionDays   Int      @default(365)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BaselineAssessment {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  sleepHours     Float?
+  sleepQuality   Int?
+  stressLevel    Int?
+  moodBaseline   Int?
+  energyLevel    Int?
+  phq9Score      Int?
+  gad7Score      Int?
+  wellbeingScore Int?
+  notes          String?  @db.Text
+  completedAt    DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyCheckIn {
+  id           String   @id @default(cuid())
+  userId       String
+  mood         Int
+  stress       Int
+  energy       Int
+  sleepQuality Int
+  sleepHours   Float?
+  reflection   String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String   @db.Text
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis JournalAnalysis?
+
+  @@index([userId, createdAt])
+}
+
+model JournalAnalysis {
+  id             String   @id @default(cuid())
+  journalEntryId String   @unique
+  sentimentScore Float
+  emotion        String
+  negativityScore Float
+  keywords       String[]
+  analyzedAt     DateTime @default(now())
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+}
+
+model VoiceNote {
+  id            String   @id @default(cuid())
+  userId        String
+  storageKey    String
+  duration      Float?
+  transcription String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  features VoiceNoteFeatures?
+}
+
+model VoiceNoteFeatures {
+  id             String   @id @default(cuid())
+  voiceNoteId    String   @unique
+  energyLevel    Float?
+  speechRate     Float?
+  pauseRatio     Float?
+  sentimentScore Float?
+  extractedAt    DateTime @default(now())
+
+  voiceNote VoiceNote @relation(fields: [voiceNoteId], references: [id], onDelete: Cascade)
+}
+
+model RiskScore {
+  id             String   @id @default(cuid())
+  userId         String
+  depressionRisk Float
+  stressRisk     Float
+  generalRisk    Float
+  computedAt     DateTime @default(now())
+
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  explanations RiskExplanationFactor[]
+  alerts       Alert[]
+
+  @@index([userId, computedAt])
+}
+
+model RiskExplanationFactor {
+  id          String @id @default(cuid())
+  riskScoreId String
+  factor      String
+  label       String
+  value       Float
+  weight      Float
+  description String
+
+  riskScore RiskScore @relation(fields: [riskScoreId], references: [id], onDelete: Cascade)
+}
+
+model ClinicianProfile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  licenseNumber String?
+  specialty     String?
+  institution   String?
+  verifiedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedUsers ClinicianLink[]
+}
+
+model ClinicianLink {
+  id           String     @id @default(cuid())
+  clinicianId  String
+  patientId    String
+  status       LinkStatus @default(PENDING)
+  inviteToken  String?    @unique
+  inviteEmail  String?
+  linkedAt     DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  clinician        User             @relation("ClinicianLinks", fields: [clinicianId], references: [id], onDelete: Cascade, map: "ClinicianLink_clinician_fkey")
+  patient          User             @relation("PatientLinks", fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianProfile ClinicianProfile @relation(fields: [clinicianId], references: [userId], onDelete: Cascade, map: "ClinicianLink_clinicianProfile_fkey")
+
+  @@unique([clinicianId, patientId])
+}
+
+enum LinkStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+model Alert {
+  id          String        @id @default(cuid())
+  userId      String
+  riskScoreId String?
+  type        AlertType
+  severity    AlertSeverity
+  title       String
+  message     String        @db.Text
+  isRead      Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  riskScore RiskScore? @relation(fields: [riskScoreId], references: [id])
+}
+
+enum AlertType {
+  RISK_THRESHOLD
+  CLINICIAN_REQUEST
+  SYSTEM
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  targetId   String
+  action     String
+  resource   String
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([targetId, createdAt])
+}
+
+model CompanionSuggestion {
+  id               String           @id @default(cuid())
+  userId           String
+  interventionType InterventionType
+  title            String
+  content          String           @db.Text
+  isCompleted      Boolean          @default(false)
+  isHelpful        Boolean?
+  createdAt        DateTime         @default(now())
+  completedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum InterventionType {
+  BREATHING
+  COGNITIVE_REFRAMING
+  BEHAVIORAL_ACTIVATION
+  SLEEP_HYGIENE
+  MINDFULNESS
+  GRATITUDE
+}
