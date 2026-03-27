@@ -25,7 +25,7 @@ MindLens helps users track mood, stress, sleep, and energy patterns over time us
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 14 (App Router) + TypeScript |
+| Framework | Next.js 16 (App Router) + TypeScript |
 | Database | PostgreSQL + Prisma ORM |
 | Auth | NextAuth v5 (next-auth@beta) |
 | Styling | Tailwind CSS v4 |

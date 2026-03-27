@@ -16,6 +16,16 @@ export interface RiskFactor {
   description: string;
 }
 
+// PHQ-9 scoring constants (max score = 27, scale to max adjustment of 35)
+const PHQ9_MAX = 27;
+const PHQ9_SCALE_FACTOR = 40;
+const PHQ9_BASELINE_OFFSET = 5;
+
+// GAD-7 scoring constants (max score = 21, scale to max adjustment of 30)
+const GAD7_MAX = 21;
+const GAD7_SCALE_FACTOR = 35;
+const GAD7_BASELINE_OFFSET = 5;
+
 /** Compute a linear regression slope for an array of values */
 function computeSlope(values: number[]): number {
   const n = values.length;
@@ -168,12 +178,10 @@ export async function computeRiskForUser(userId: string): Promise<RiskResult> {
   let phqAdjust = 0;
   let gadAdjust = 0;
   if (baseline?.phq9Score !== null && baseline?.phq9Score !== undefined) {
-    // PHQ-9: 0-4 minimal, 5-9 mild, 10-14 moderate, 15+ severe
-    phqAdjust = clamp((baseline.phq9Score / 27) * 40 - 5);
+    phqAdjust = clamp((baseline.phq9Score / PHQ9_MAX) * PHQ9_SCALE_FACTOR - PHQ9_BASELINE_OFFSET);
   }
   if (baseline?.gad7Score !== null && baseline?.gad7Score !== undefined) {
-    // GAD-7: 0-4 minimal, 5-9 mild, 10-14 moderate, 15+ severe
-    gadAdjust = clamp((baseline.gad7Score / 21) * 35 - 5);
+    gadAdjust = clamp((baseline.gad7Score / GAD7_MAX) * GAD7_SCALE_FACTOR - GAD7_BASELINE_OFFSET);
   }
 
   // ─── Weighted final scores ───────────────────────────────────────────

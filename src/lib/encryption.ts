@@ -8,10 +8,11 @@ const TAG_LENGTH = 16; // bytes
 function getKey(): Buffer {
   const keyStr = process.env.ENCRYPTION_KEY ?? "";
   if (keyStr.length === 0) {
-    // In development without a key, use a deterministic zero-key (NOT for production)
-    return Buffer.alloc(KEY_LENGTH, 0);
+    throw new Error(
+      "ENCRYPTION_KEY environment variable is not set. " +
+      "Set it to a 32-character string before using encryption features."
+    );
   }
-  // Derive consistent 32-byte key from the env string
   return crypto.createHash("sha256").update(keyStr).digest();
 }
 
